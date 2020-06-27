@@ -37,6 +37,7 @@ def parse_option():
                         help='num of workers to use')
     parser.add_argument('--epochs', type=int, default=1000,
                         help='number of training epochs')
+    parser.add_argument('--accum_grad', type = int, default = 8, help = 'Accumulate grad')
 
     # optimization
     parser.add_argument('--learning_rate', type=float, default=0.05,
@@ -179,6 +180,8 @@ def set_model(opt):
 
 def train(train_loader, model, criterion, optimizer, epoch, opt):
     """one epoch training"""
+     # 128 is maximum batch size that fits memory
+    
     model.train()
 
     batch_time = AverageMeter()
@@ -213,10 +216,12 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
         losses.update(loss.item(), bsz)
 
         # SGD
-        optimizer.zero_grad()
+        #optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
-
+        #optimizer.step()
+        if (idx + 1) % opt.accum_grad == 0:
+            optimizer.step()
+            optimizer.zero_grad()
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
