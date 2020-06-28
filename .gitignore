@@ -2,6 +2,7 @@ tmp*.py
 .idea/
 datasets/
 save/
+tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

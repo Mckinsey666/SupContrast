@@ -9,12 +9,15 @@ import math
 import tensorboard_logger as tb_logger
 import torch
 import torch.backends.cudnn as cudnn
+from torch.autograd import Variable
 from torchvision import transforms, datasets
+from torchvision.utils import save_image
 
 from util import TwoCropTransform, AverageMeter
 from util import adjust_learning_rate, warmup_learning_rate
 from util import set_optimizer, save_model
-from networks.resnet_big import SupConResNet
+from util import CIFAR10_Transform, TensorTransform, Denormalize
+from networks.resnet_big import AugConResNet, AugmentSelector
 from losses import SupConLoss
 
 try:
@@ -142,9 +145,11 @@ def set_loader(opt):
         normalize,
     ])
 
+    transform_module = CIFAR10_Transform(aug_classes = 5, normalize = normalize)
+
     if opt.dataset == 'cifar10':
         train_dataset = datasets.CIFAR10(root=opt.data_folder,
-                                         transform=TwoCropTransform(train_transform),
+                                         transform=TensorTransform(normalize),
                                          download=True)
     elif opt.dataset == 'cifar100':
         train_dataset = datasets.CIFAR100(root=opt.data_folder,
@@ -158,11 +163,13 @@ def set_loader(opt):
         train_dataset, batch_size=opt.batch_size, shuffle=(train_sampler is None),
         num_workers=opt.num_workers, pin_memory=True, sampler=train_sampler)
 
-    return train_loader
+    return train_loader, transform_module
 
 
 def set_model(opt):
-    model = SupConResNet(name=opt.model)
+    model = AugConResNet(name=opt.model)
+    aug_model = AugmentSelector(name=opt.model)
+
     criterion = SupConLoss(temperature=opt.temp)
 
     # enable synchronized Batch Normalization
@@ -176,34 +183,55 @@ def set_model(opt):
         criterion = criterion.cuda()
         cudnn.benchmark = True
 
-    return model, criterion
+    return model, aug_model, criterion
 
 
-def train(train_loader, model, criterion, optimizer, epoch, opt):
+def train(train_loader, feature_model, aug_model, criterion, feature_optimizer, aug_optimizer, epoch, opt, transform):
     """one epoch training"""
      # 128 is maximum batch size that fits memory
     
-    model.train()
+    feature_model.train()
+    aug_model.train()
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
-    losses = AverageMeter()
+    infomax_losses = AverageMeter()
 
     end = time.time()
     for idx, (images, labels) in enumerate(train_loader):
         data_time.update(time.time() - end)
 
-        images = torch.cat([images[0], images[1]], dim=0)
-        images = images.to(device)#cuda(non_blocking=True)
+        tensor_image = images[0]
+        normalized_image = images[1]
+        #print(tensor_image.shape, normalized_image.shape)
+
+        #images = images.to(device)#cuda(non_blocking=True)
+        tensor_image = tensor_image.to(device)
+        normalized_image = normalized_image.to(device)
+
         labels = labels.to(device)#cuda(non_blocking=True)
         bsz = labels.shape[0]
 
         # warm-up learning rate
-        warmup_learning_rate(opt, epoch, idx, len(train_loader), optimizer)
+        warmup_learning_rate(opt, epoch, idx, len(train_loader), feature_optimizer)
+        warmup_learning_rate(opt, epoch, idx, len(train_loader), aug_optimizer)
+
 
         # compute loss
-        features = model(images)
-        f1, f2 = torch.split(features, [bsz, bsz], dim=0)
+        hidden_features, _ = feature_model(normalized_image) # extract hidden and projected
+        #print(hidden_features.shape)
+        aug_vec = aug_model(hidden_features) # get augmentation vector
+
+        # Train feature extractor
+        v1 = transform(tensor_image, aug_vec).to(device)
+        v2 = transform(tensor_image, aug_vec).to(device)
+
+        _, f1 = feature_model(v1)
+        _, f2 = feature_model(v2)
+
+
+
+        #f1, f2 = torch.split(features, [bsz, bsz], dim=0)
         features = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
         if opt.method == 'SupCon':
             loss = criterion(features, labels)
@@ -214,17 +242,27 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
                              format(opt.method))
 
         # update metric
-        losses.update(loss.item(), bsz)
+        infomax_losses.update(loss.item(), bsz)
 
         # SGD
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        #if (idx + 1) % opt.accum_grad == 0:
-        #    optimizer.step()
-        #    optimizer.zero_grad()
+        feature_optimizer.zero_grad()
+        loss.backward() # retain variables
+        feature_optimizer.step()
         
+        aug_loss = Variable(aug_vec * loss, requires_grad = True)
+        print(aug_loss)
+        aug_vec.backward(aug_loss)
+        aug_optimizer.step()
+        for param in aug_model.parameters():
+            print(param.data)
+        #Train view selector
+
+
+
+
+
+
+
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
@@ -236,7 +274,7 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
                   'DT {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'loss {loss.val:.3f} ({loss.avg:.3f})'.format(
                    epoch, idx + 1, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses))
+                   data_time=data_time, loss=infomax_losses))
             sys.stdout.flush()
 
     return losses.avg
@@ -245,41 +283,47 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
 def main():
     opt = parse_option()
 
-    # build data loader
-    train_loader = set_loader(opt)
+    # build data loader and transform module
+    train_loader, transform = set_loader(opt)
 
     # build model and criterion
-    model, criterion = set_model(opt)
+    feature_model, aug_model, criterion = set_model(opt)
 
     # build optimizer
-    optimizer = set_optimizer(opt, model)
+    feature_optimizer = set_optimizer(opt, feature_model)
+    aug_optimizer = set_optimizer(opt, aug_model)
 
     # tensorboard
     logger = tb_logger.Logger(logdir=opt.tb_folder, flush_secs=2)
 
     # training routine
     for epoch in range(1, opt.epochs + 1):
-        adjust_learning_rate(opt, optimizer, epoch)
+        adjust_learning_rate(opt, feature_optimizer, epoch)
+        adjust_learning_rate(opt, aug_optimizer, epoch)
 
         # train for one epoch
         time1 = time.time()
-        loss = train(train_loader, model, criterion, optimizer, epoch, opt)
+        loss = train(train_loader, feature_model, aug_model, criterion, feature_optimizer, aug_optimizer, epoch, opt, transform)
         time2 = time.time()
         print('epoch {}, total time {:.2f}'.format(epoch, time2 - time1))
 
         # tensorboard logger
         logger.log_value('loss', loss, epoch)
-        logger.log_value('learning_rate', optimizer.param_groups[0]['lr'], epoch)
+        logger.log_value('learning_rate', feature_optimizer.param_groups[0]['lr'], epoch)
 
         if epoch % opt.save_freq == 0:
             save_file = os.path.join(
-                opt.save_folder, 'ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
-            save_model(model, optimizer, opt, epoch, save_file)
+                opt.save_folder, 'feature_ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
+            save_model(feature_model, feature_optimizer, opt, epoch, save_file)
+
+            save_file = os.path.join(
+                opt.save_folder, 'aug_ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
+            save_model(aug_model, aug_optimizer, opt, epoch, save_file)
 
     # save the last model
     save_file = os.path.join(
         opt.save_folder, 'last.pth')
-    save_model(model, optimizer, opt, opt.epochs, save_file)
+    save_model(feature_model, feature_optimizer, opt, opt.epochs, save_file)
 
 
 if __name__ == '__main__':

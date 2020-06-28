@@ -7,7 +7,8 @@ Adapted from: https://github.com/bearpaw/pytorch-classification
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torch.autograd import Variable
+from .gumbel import gumbel_softmax
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -207,3 +208,57 @@ class LinearClassifier(nn.Module):
 
     def forward(self, features):
         return self.fc(features)
+
+class AugConResNet(nn.Module):
+    """backbone + projection head"""
+    def __init__(self, name='resnet50', head='mlp', feat_dim=128):
+        super(AugConResNet, self).__init__()
+        model_fun, dim_in = model_dict[name]
+        self.encoder = model_fun()
+        if head == 'linear':
+            self.head = nn.Linear(dim_in, feat_dim)
+        elif head == 'mlp':
+            self.head = nn.Sequential(
+                nn.Linear(dim_in, dim_in),
+                nn.ReLU(inplace=True),
+                nn.Linear(dim_in, feat_dim)
+            )
+        else:
+            raise NotImplementedError(
+                'head not supported: {}'.format(head))
+
+    def forward(self, x):
+        feat = self.encoder(x)
+        proj = F.normalize(self.head(feat), dim=1)
+        return feat, proj
+
+class AugmentSelector(nn.Module):
+    """Augmentation selector"""
+    def __init__(self, name='resnet18', num_classes=5):
+        super(AugmentSelector, self).__init__()
+        _, feat_dim = model_dict[name]
+        self.mlp = nn.Sequential(
+            nn.Linear(feat_dim, feat_dim),
+            nn.ReLU(inplace = True),
+            nn.BatchNorm1d(feat_dim),
+            nn.Linear(feat_dim, num_classes),
+            nn.Sigmoid()
+        )
+    
+    def forward(self, features):
+        probs = self.mlp(features)
+
+        positive_p = probs.unsqueeze(-1)
+        negative_p = (1 - probs).unsqueeze(-1)
+        category_p = torch.cat([positive_p, negative_p], -1) # bernoulli = 2 category sampling
+        category_p = torch.log(category_p)
+
+        bernoulli_sample = gumbel_softmax(Variable(category_p, requires_grad = True), 0.8)[:, :, 0]
+        
+        return bernoulli_sample
+
+if __name__ == '__main__':
+    G = AugmentSelector()
+    x = torch.randn(10, 512)
+    a = G(x)
+    print(a)
