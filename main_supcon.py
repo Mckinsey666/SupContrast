@@ -216,13 +216,15 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
         losses.update(loss.item(), bsz)
 
         # SGD
-        #optimizer.zero_grad()
+        optimizer.zero_grad()
         loss.backward()
-        #optimizer.step()
-        if (idx + 1) % opt.accum_grad == 0:
-            optimizer.step()
-            optimizer.zero_grad()
-        # measure elapsed time
+        optimizer.step()
+        
+	#if (idx + 1) % opt.accum_grad == 0:
+        #    optimizer.step()
+        #    optimizer.zero_grad()
+        
+	# measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
