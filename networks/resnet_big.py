@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from .gumbel import gumbel_softmax
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -239,7 +238,7 @@ class AugmentSelector(nn.Module):
         _, feat_dim = model_dict[name]
         self.mlp = nn.Sequential(
             nn.Linear(feat_dim, feat_dim),
-            nn.ReLU(inplace = True),
+            nn.ReLU(),
             nn.BatchNorm1d(feat_dim),
             nn.Linear(feat_dim, num_classes),
             nn.Sigmoid()
@@ -251,14 +250,14 @@ class AugmentSelector(nn.Module):
         positive_p = probs.unsqueeze(-1)
         negative_p = (1 - probs).unsqueeze(-1)
         category_p = torch.cat([positive_p, negative_p], -1) # bernoulli = 2 category sampling
-        category_p = torch.log(category_p)
+        category_p = torch.log(category_p + 1e-20)
 
-        bernoulli_sample = gumbel_softmax(Variable(category_p, requires_grad = True), 0.8)[:, :, 0]
+        bernoulli_sample = F.gumbel_softmax(category_p, hard = True)[:, :, 0]
         
         return bernoulli_sample
 
 if __name__ == '__main__':
     G = AugmentSelector()
-    x = torch.randn(10, 512)
+    x = torch.randn(3, 512)
     a = G(x)
     print(a)

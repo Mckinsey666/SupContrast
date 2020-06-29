@@ -15,9 +15,12 @@ from torchvision.utils import save_image
 
 from util import TwoCropTransform, AverageMeter
 from util import adjust_learning_rate, warmup_learning_rate
-from util import set_optimizer, save_model
-from util import CIFAR10_Transform, TensorTransform, Denormalize
-from networks.resnet_big import AugConResNet, AugmentSelector
+from util import set_optimizer, set_optimizer_param, save_model, save_param
+from util import Denormalize
+
+from aug import CIFAR10_Transform
+
+from networks.resnet_big import SupConResNet
 from losses import SupConLoss
 
 try:
@@ -27,6 +30,7 @@ except ImportError:
     pass
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+torch.autograd.set_detect_anomaly(True)
 
 def parse_option():
     parser = argparse.ArgumentParser('argument for training')
@@ -41,7 +45,8 @@ def parse_option():
                         help='num of workers to use')
     parser.add_argument('--epochs', type=int, default=1000,
                         help='number of training epochs')
-    parser.add_argument('--accum_grad', type = int, default = 8, help = 'Accumulate grad')
+    parser.add_argument('--aug_num', type=int, default=5,
+                        help='number of augmentations')
 
     # optimization
     parser.add_argument('--learning_rate', type=float, default=0.05,
@@ -77,6 +82,7 @@ def parse_option():
                         help='warm-up for large batch training')
     parser.add_argument('--trial', type=str, default='0',
                         help='id for recording multiple runs')
+                        
 
     opt = parser.parse_args()
 
@@ -134,6 +140,7 @@ def set_loader(opt):
         raise ValueError('dataset not supported: {}'.format(opt.dataset))
     normalize = transforms.Normalize(mean=mean, std=std)
 
+    """
     train_transform = transforms.Compose([
         transforms.RandomResizedCrop(size=32, scale=(0.2, 1.)),
         transforms.RandomHorizontalFlip(),
@@ -144,12 +151,15 @@ def set_loader(opt):
         transforms.ToTensor(),
         normalize,
     ])
+    """
 
-    transform_module = CIFAR10_Transform(aug_classes = 5, normalize = normalize)
+    train_transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
 
     if opt.dataset == 'cifar10':
         train_dataset = datasets.CIFAR10(root=opt.data_folder,
-                                         transform=TensorTransform(normalize),
+                                         transform=train_transform,
                                          download=True)
     elif opt.dataset == 'cifar100':
         train_dataset = datasets.CIFAR100(root=opt.data_folder,
@@ -163,12 +173,11 @@ def set_loader(opt):
         train_dataset, batch_size=opt.batch_size, shuffle=(train_sampler is None),
         num_workers=opt.num_workers, pin_memory=True, sampler=train_sampler)
 
-    return train_loader, transform_module
+    return train_loader
 
 
 def set_model(opt):
-    model = AugConResNet(name=opt.model)
-    aug_model = AugmentSelector(name=opt.model)
+    model = SupConResNet(name=opt.model)
 
     criterion = SupConLoss(temperature=opt.temp)
 
@@ -183,55 +192,44 @@ def set_model(opt):
         criterion = criterion.cuda()
         cudnn.benchmark = True
 
-    return model, aug_model, criterion
+    transform_module = CIFAR10_Transform()
+
+    return model, criterion, transform_module
 
 
-def train(train_loader, feature_model, aug_model, criterion, feature_optimizer, aug_optimizer, epoch, opt, transform):
+def train(train_loader, model, aug_params, criterion, optimizers, epoch, opt, transform):
     """one epoch training"""
      # 128 is maximum batch size that fits memory
-    
-    feature_model.train()
-    aug_model.train()
+    denorm = Denormalize(transform.mean, transform.std)
+
+    model.train()
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
     infomax_losses = AverageMeter()
+    infomin_losses = AverageMeter()
 
     end = time.time()
     for idx, (images, labels) in enumerate(train_loader):
         data_time.update(time.time() - end)
 
-        tensor_image = images[0]
-        normalized_image = images[1]
-        #print(tensor_image.shape, normalized_image.shape)
-
-        #images = images.to(device)#cuda(non_blocking=True)
-        tensor_image = tensor_image.to(device)
-        normalized_image = normalized_image.to(device)
+        images = images.to(device) # images is batch tensor
 
         labels = labels.to(device)#cuda(non_blocking=True)
         bsz = labels.shape[0]
 
-        # warm-up learning rate
-        warmup_learning_rate(opt, epoch, idx, len(train_loader), feature_optimizer)
-        warmup_learning_rate(opt, epoch, idx, len(train_loader), aug_optimizer)
-
-
-        # compute loss
-        hidden_features, _ = feature_model(normalized_image) # extract hidden and projected
-        #print(hidden_features.shape)
-        aug_vec = aug_model(hidden_features) # get augmentation vector
+        # warm-up learning rate for all optimizers
+        for _, optimizer in optimizers.items():
+            warmup_learning_rate(opt, epoch, idx, len(train_loader), optimizer)
 
         # Train feature extractor
-        v1 = transform(tensor_image, aug_vec).to(device)
-        v2 = transform(tensor_image, aug_vec).to(device)
+        v1 = transform(images, aug_params['p'])
+        v2 = transform(images, aug_params['p'])
+        v = torch.cat([v1, v2], dim = 0)
 
-        _, f1 = feature_model(v1)
-        _, f2 = feature_model(v2)
+        features = model(v)
 
-
-
-        #f1, f2 = torch.split(features, [bsz, bsz], dim=0)
+        f1, f2 = torch.split(features, [bsz, bsz], dim=0)
         features = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
         if opt.method == 'SupCon':
             loss = criterion(features, labels)
@@ -245,23 +243,33 @@ def train(train_loader, feature_model, aug_model, criterion, feature_optimizer, 
         infomax_losses.update(loss.item(), bsz)
 
         # SGD
-        feature_optimizer.zero_grad()
+        optimizers['model'].zero_grad()
         loss.backward() # retain variables
-        feature_optimizer.step()
+        optimizers['model'].step()
         
-        aug_loss = Variable(aug_vec * loss, requires_grad = True)
-        print(aug_loss)
-        aug_vec.backward(aug_loss)
-        aug_optimizer.step()
-        for param in aug_model.parameters():
-            print(param.data)
-        #Train view selector
+        # Train augmentation params
 
+        v1 = transform(images, aug_params['p'])
+        v2 = transform(images, aug_params['p'])
+        v = torch.cat([v1, v2], dim = 0)
 
+        features = model(v)
 
-
-
-
+        f1, f2 = torch.split(features, [bsz, bsz], dim=0)
+        features = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
+        if opt.method == 'SupCon':
+            loss = -criterion(features, labels) # minimize -L_NCE = maximize L_NCE = minimize InfoNCE
+        elif opt.method == 'SimCLR':
+            loss = -criterion(features)
+        else:
+            raise ValueError('contrastive method not supported: {}'.
+                             format(opt.method))
+        
+        infomin_losses.update(loss.item(), bsz)
+        
+        optimizers['p'].zero_grad()
+        loss.backward()
+        optimizers['p'].step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -270,60 +278,74 @@ def train(train_loader, feature_model, aug_model, criterion, feature_optimizer, 
         # print info
         if (idx + 1) % opt.print_freq == 0:
             print('Train: [{0}][{1}/{2}]\t'
-                  'BT {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'DT {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'loss {loss.val:.3f} ({loss.avg:.3f})'.format(
-                   epoch, idx + 1, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=infomax_losses))
+                  'max_loss {max_loss.val:.3f} ({max_loss.avg:.3f})\t'
+                  'min_loss {min_loss.val:.3f} ({min_loss.avg:.3f})'.format(
+                   epoch, idx + 1, len(train_loader), max_loss=infomax_losses, 
+                   min_loss=infomin_losses))
+            print('P: [{}]'.format(torch.sigmoid(aug_params['p'])))
             sys.stdout.flush()
 
-    return losses.avg
+    return infomax_losses.avg, infomin_losses.avg
 
 
 def main():
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     opt = parse_option()
 
     # build data loader and transform module
-    train_loader, transform = set_loader(opt)
+    train_loader = set_loader(opt)
 
-    # build model and criterion
-    feature_model, aug_model, criterion = set_model(opt)
+    # build model, criterion, and transform module
+    model, criterion, transform = set_model(opt)
 
-    # build optimizer
-    feature_optimizer = set_optimizer(opt, feature_model)
-    aug_optimizer = set_optimizer(opt, aug_model)
+    # build aug params
+    # raw probabilities for each augmentation
+    p_raw = Variable(torch.zeros(opt.aug_num), requires_grad = True).to(device)
+
+    aug_params = {}
+    aug_params['p'] = p_raw
+
+    # build optimizers
+    optimizers = {}
+    optimizers['model'] = set_optimizer(opt, model)
+    optimizers['p'] = set_optimizer_param(opt, [p_raw])
 
     # tensorboard
     logger = tb_logger.Logger(logdir=opt.tb_folder, flush_secs=2)
 
     # training routine
     for epoch in range(1, opt.epochs + 1):
-        adjust_learning_rate(opt, feature_optimizer, epoch)
-        adjust_learning_rate(opt, aug_optimizer, epoch)
+        for _, optimizer in optimizers.items():
+            adjust_learning_rate(opt, optimizer, epoch)
 
         # train for one epoch
         time1 = time.time()
-        loss = train(train_loader, feature_model, aug_model, criterion, feature_optimizer, aug_optimizer, epoch, opt, transform)
+        infomax_loss, infomin_loss = train(train_loader, model, aug_params, criterion, optimizers, epoch, opt, transform)
         time2 = time.time()
         print('epoch {}, total time {:.2f}'.format(epoch, time2 - time1))
 
         # tensorboard logger
-        logger.log_value('loss', loss, epoch)
-        logger.log_value('learning_rate', feature_optimizer.param_groups[0]['lr'], epoch)
+        logger.log_value('infomax_loss', infomax_loss, epoch)
+        logger.log_value('infomin_loss', infomin_loss, epoch)
+        logger.log_value('learning_rate', optimizers['model'].param_groups[0]['lr'], epoch)
 
         if epoch % opt.save_freq == 0:
             save_file = os.path.join(
-                opt.save_folder, 'feature_ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
-            save_model(feature_model, feature_optimizer, opt, epoch, save_file)
+                opt.save_folder, 'ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
+            save_model(model, optimizers['model'], opt, epoch, save_file)
 
             save_file = os.path.join(
-                opt.save_folder, 'aug_ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
-            save_model(aug_model, aug_optimizer, opt, epoch, save_file)
+                opt.save_folder, 'ckpt_param_{epoch}.pth'.format(epoch=epoch))
+            save_param(p_raw, optimizers['p'], opt, epoch, save_file)
 
-    # save the last model
+    # save the last model and params
     save_file = os.path.join(
         opt.save_folder, 'last.pth')
-    save_model(feature_model, feature_optimizer, opt, opt.epochs, save_file)
+    save_model(model, optimizers['model'], opt, opt.epochs, save_file)
+
+    save_file = os.path.join(
+        opt.save_folder, 'last_p.pth')
+    save_param(p_raw, optimizers['p'], opt, opt.epochs, save_file)
 
 
 if __name__ == '__main__':
