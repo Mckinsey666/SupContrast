@@ -14,8 +14,11 @@ from torchvision import transforms, datasets
 from util import TwoCropTransform, AverageMeter
 from util import adjust_learning_rate, warmup_learning_rate
 from util import set_optimizer, save_model
+from util import rand_color_aug
 from networks.resnet_big import SupConResNet
 from losses import SupConLoss
+
+from data import TruncatedCIFAR10
 
 try:
     import apex
@@ -56,6 +59,7 @@ def parse_option():
     parser.add_argument('--model', type=str, default='resnet50')
     parser.add_argument('--dataset', type=str, default='cifar10',
                         choices=['cifar10', 'cifar100'], help='dataset')
+    parser.add_argument('--fraction', type=float, default=1, help="truncate dataset")
 
     # method
     parser.add_argument('--method', type=str, default='SupCon',
@@ -143,9 +147,13 @@ def set_loader(opt):
     ])
 
     if opt.dataset == 'cifar10':
-        train_dataset = datasets.CIFAR10(root=opt.data_folder,
-                                         transform=TwoCropTransform(train_transform),
-                                         download=True)
+        train_dataset = TruncatedCIFAR10(root=opt.data_folder+'cifar10.npy', 
+                                         transform=TwoCropTransform(train_transform), 
+                                         fraction=opt.fraction)
+        #train_dataset = datasets.CIFAR10(root=opt.data_folder,
+                                         #transform=TwoCropTransform(train_transform),
+                                         #download=True)
+        
     elif opt.dataset == 'cifar100':
         train_dataset = datasets.CIFAR100(root=opt.data_folder,
                                           transform=TwoCropTransform(train_transform),
@@ -190,6 +198,7 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
     losses = AverageMeter()
 
     end = time.time()
+    
     for idx, (images, labels) in enumerate(train_loader):
         data_time.update(time.time() - end)
 
