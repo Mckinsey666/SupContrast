@@ -7,7 +7,7 @@ Adapted from: https://github.com/bearpaw/pytorch-classification
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torch.autograd import Variable
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -28,11 +28,11 @@ class BasicBlock(nn.Module):
             )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)), inplace = True)
+        out = F.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
         preact = out
-        out = F.relu(out, inplace = True)
+        out = F.relu(out)
         if self.is_last:
             return out, preact
         else:
@@ -60,12 +60,12 @@ class Bottleneck(nn.Module):
             )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)), inplace = True)
-        out = F.relu(self.bn2(self.conv2(out)), inplace = True)
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn2(self.conv2(out)))
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
         preact = out
-        out = F.relu(out, inplace = True)
+        out = F.relu(out)
         if self.is_last:
             return out, preact
         else:
@@ -114,7 +114,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x, layer=100):
-        out = F.relu(self.bn1(self.conv1(x)), inplace = True)
+        out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
@@ -173,7 +173,7 @@ class SupConResNet(nn.Module):
         elif head == 'mlp':
             self.head = nn.Sequential(
                 nn.Linear(dim_in, dim_in),
-                nn.ReLU(inplace=True),
+                nn.ReLU(),
                 nn.Linear(dim_in, feat_dim)
             )
         else:
@@ -182,6 +182,7 @@ class SupConResNet(nn.Module):
 
     def forward(self, x):
         feat = self.encoder(x)
+        self.hidden_feat = feat
         feat = F.normalize(self.head(feat), dim=1)
         return feat
 
@@ -207,3 +208,11 @@ class LinearClassifier(nn.Module):
 
     def forward(self, features):
         return self.fc(features)
+
+
+
+if __name__ == '__main__':
+    G = AugmentSelector()
+    x = torch.randn(3, 512)
+    a = G(x)
+    print(a)

@@ -4,7 +4,10 @@ import math
 import numpy as np
 import torch
 import torch.optim as optim
-
+from torchvision import transforms
+import torchvision.transforms.functional as F
+import cv2
+from PIL import Image
 
 class TwoCropTransform:
     """Create two crops of the same image"""
@@ -13,6 +16,20 @@ class TwoCropTransform:
 
     def __call__(self, x):
         return [self.transform(x), self.transform(x)]
+
+
+class MultiTwoCropTransform:
+    """ Create N different 2 crop transforms of the same image """
+    def __init__(self, transform):
+        """
+        Args: 
+            transform: list of size [N] defining n transforms
+        """
+        self.transform = transform
+    
+    def __call__(self, x):
+        return sum([[t(x), t(x)] for t in self.transform], [])
+
 
 
 class AverageMeter(object):
@@ -82,6 +99,13 @@ def set_optimizer(opt, model):
                           weight_decay=opt.weight_decay)
     return optimizer
 
+def set_optimizer_param(opt, params):
+    optimizer = optim.SGD(params,
+                          lr=opt.learning_rate,
+                          momentum=opt.momentum,
+                          weight_decay=opt.weight_decay)
+    return optimizer
+
 
 def save_model(model, optimizer, opt, epoch, save_file):
     print('==> Saving...')
@@ -93,3 +117,33 @@ def save_model(model, optimizer, opt, epoch, save_file):
     }
     torch.save(state, save_file)
     del state
+
+def save_param(param, optimizer, opt, epoch, save_file):
+    print('==> Saving...')
+    state = {
+        'opt': opt,
+        'model': param,
+        'optimizer': optimizer.state_dict(),
+        'epoch': epoch,
+    }
+    torch.save(state, save_file)
+    del state
+
+
+class Denormalize:
+    def __init__(self, mean, std):
+        self.denorm = transforms.Normalize(
+            mean=[-m*1.0/s for m, s in zip(mean, std)],
+            std=[1.0/s for s in std]
+        )
+    def __call__(self, batch):
+        res = torch.cat([self.denorm(batch[i]).unsqueeze(0) for i in range(len(batch))], dim = 0)
+        return res
+
+if __name__ == '__main__':
+    x = Image.open('dog.jpg')
+    kernel_size = 0.1 * min(x.size)
+    blur = GaussianBlur(kernel_size = kernel_size)
+    x = blur(x)
+    x.save('blur.jpg')
+

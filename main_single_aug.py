@@ -17,6 +17,8 @@ from util import set_optimizer, save_model
 from networks.resnet_big import SupConResNet
 from losses import SupConLoss
 
+from aug import GaussianBlur
+
 try:
     import apex
     from apex import amp, optimizers
@@ -60,6 +62,10 @@ def parse_option():
     # method
     parser.add_argument('--method', type=str, default='SupCon',
                         choices=['SupCon', 'SimCLR'], help='choose method')
+    parser.add_argument('--aug_type', type=str, default='crop',
+                        choices=['crop', 'jitter', 'affine', 'blur'])
+    parser.add_argument('--aug_strength', type=float, default=1,
+                        help='Aug strength from 0 to 1')
 
     # temperature
     parser.add_argument('--temp', type=float, default=0.07,
@@ -91,6 +97,9 @@ def parse_option():
         format(opt.method, opt.dataset, opt.model, opt.learning_rate,
                opt.weight_decay, opt.batch_size, opt.temp, opt.trial)
 
+    # add single augmentation to model
+    opt.model_name = '{}_aug_{}_{}'.format(opt.model_name, opt.aug_type, opt.aug_strength)
+    
     if opt.cosine:
         opt.model_name = '{}_cosine'.format(opt.model_name)
 
@@ -131,6 +140,7 @@ def set_loader(opt):
         raise ValueError('dataset not supported: {}'.format(opt.dataset))
     normalize = transforms.Normalize(mean=mean, std=std)
 
+    """
     train_transform = transforms.Compose([
         transforms.RandomResizedCrop(size=32, scale=(0.2, 1.)),
         transforms.RandomHorizontalFlip(),
@@ -141,6 +151,37 @@ def set_loader(opt):
         transforms.ToTensor(),
         normalize,
     ])
+    """
+    if opt.aug_type == 'crop':
+        # crop from 0.08 (SimCLR) ~ 0.58
+        scale_low = -0.5 * opt.aug_strength + 0.58
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(size=32, scale=(scale_low, 1.)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.ToTensor(),
+            normalize,
+        ])
+    elif opt.aug_type == 'blur':
+        # sigma from 1 ~ 5
+        kernel_size = 3
+        sigma = opt.aug_strength * 4 + 1 
+        train_transform = transforms.Compose([
+            GaussianBlur(kernel_size, min = 0.2, max = sigma),
+            transforms.ToTensor(),
+            normalize,
+        ])
+    elif opt.aug_type == 'jitter':
+        # Jitter scale from 0.125 ~ 2.5
+        scale = 2.375 * opt.aug_strength + 0.125
+        train_transform = transforms.Compose([
+            transforms.ColorJitter(0.4 * scale, 0.4 * scale, 0.4 * scale, 0.1 * scale),
+            transforms.ToTensor(),
+            normalize,
+        ])
 
     if opt.dataset == 'cifar10':
         train_dataset = datasets.CIFAR10(root=opt.data_folder,
@@ -191,11 +232,13 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
 
     end = time.time()
     for idx, (images, labels) in enumerate(train_loader):
+        # images is two crop transform
+        
         data_time.update(time.time() - end)
 
         images = torch.cat([images[0], images[1]], dim=0)
-        images = images.to(device)#cuda(non_blocking=True)
-        labels = labels.to(device)#cuda(non_blocking=True)
+        images = images.to(device) #cuda(non_blocking=True)
+        labels = labels.to(device) #cuda(non_blocking=True)
         bsz = labels.shape[0]
 
         # warm-up learning rate
