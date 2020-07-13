@@ -6,7 +6,7 @@ import torch
 import torch.optim as optim
 from torchvision import transforms
 import torchvision.transforms.functional as F
-import cv2
+#import cv2
 from PIL import Image
 
 class TwoCropTransform:
@@ -129,6 +129,27 @@ def save_param(param, optimizer, opt, epoch, save_file):
     torch.save(state, save_file)
     del state
 
+def rand_brightness(x):
+    x = x + (torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device) - 0.5)
+    return x
+
+
+def rand_saturation(x):
+    x_mean = x.mean(dim=1, keepdim=True)
+    x = (x - x_mean) * (torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device) * 2) + x_mean
+    return x
+
+
+def rand_contrast(x):
+    x_mean = x.mean(dim=[1, 2, 3], keepdim=True)
+    x = (x - x_mean) * (torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device) + 0.5) + x_mean
+    return x
+
+def rand_color_aug(x):
+    x = rand_brightness(x)
+    x = rand_saturation(x)
+    x = rand_contrast(x)
+    return x
 
 class Denormalize:
     def __init__(self, mean, std):
