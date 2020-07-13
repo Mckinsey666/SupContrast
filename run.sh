@@ -5,5 +5,5 @@ python3 main_supcon.py --batch_size 1024 \
   --method SimCLR \
   --model resnet18 \
   --epochs 200 \
-  --fraction 0.1 \
-  --trial cifar10_0.1
+  --fraction 1 \
+  --trial cifar10_full_no_gray
