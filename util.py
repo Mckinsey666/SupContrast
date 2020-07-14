@@ -18,6 +18,20 @@ class TwoCropTransform:
         return [self.transform(x), self.transform(x)]
 
 
+class MultiTwoCropTransform:
+    """ Create N different 2 crop transforms of the same image """
+    def __init__(self, transform):
+        """
+        Args: 
+            transform: list of size [N] defining n transforms
+        """
+        self.transform = transform
+    
+    def __call__(self, x):
+        return sum([[t(x), t(x)] for t in self.transform], [])
+
+
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):

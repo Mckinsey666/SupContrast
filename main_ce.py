@@ -49,6 +49,7 @@ def parse_option():
     parser.add_argument('--momentum', type=float, default=0.9,
                         help='momentum')
 
+
     # model dataset
     parser.add_argument('--model', type=str, default='resnet50')
     parser.add_argument('--dataset', type=str, default='cifar10',
@@ -63,6 +64,7 @@ def parse_option():
                         help='warm-up for large batch training')
     parser.add_argument('--trial', type=str, default='0',
                         help='id for recording multiple runs')
+    parser.add_argument('--strength', type=float)
 
     opt = parser.parse_args()
 
@@ -327,6 +329,9 @@ def main():
     save_model(model, optimizer, opt, opt.epochs, save_file)
 
     print('best accuracy: {:.2f}'.format(best_acc))
+    with open('exp.txt', 'a') as file:
+        file.write(str(opt)+'\n')
+        file.write(str(best_acc) + '\n')
 
 
 if __name__ == '__main__':

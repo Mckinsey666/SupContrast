@@ -1,0 +1,45 @@
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.0_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+83.58999633789062
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.1_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+84.02999877929688
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.2_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+84.6500015258789
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.3_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+85.48999786376953
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.4_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+86.11000061035156
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.5_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+86.77999877929688
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.6_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+87.43000030517578
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.7_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+87.52999877929688
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.8_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+87.15999603271484
+
+Namespace(batch_size=512, ckpt='/home/byronhsu/brian/SupContrast/save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_comp_aug_crop_0.9_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+87.5999984741211
+
+Namespace(batch_size=512, ckpt='save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_0_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+87.7699966430664
+
+Namespace(batch_size=512, ckpt='save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_cifar10_full_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+72.70999908447266
+
+Namespace(batch_size=512, ckpt='save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_cifar10_full_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+82.9000015258789
+
+Namespace(batch_size=512, ckpt='save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_crop_0.05_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+76.97999572753906
+
+Namespace(batch_size=512, ckpt='save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_fa_policy_cosine_warm/ckpt_epoch_200.pth', cosine=False, data_folder='./datasets/', dataset='cifar10', epochs=100, learning_rate=1.0, lr_decay_epochs=[60, 75, 90], lr_decay_rate=0.2, model='resnet18', model_name='cifar10_resnet18_lr_1.0_decay_0_bsz_512', momentum=0.9, n_cls=10, num_workers=16, print_freq=10, save_freq=50, warm=False, weight_decay=0)
+82.18000030517578
+

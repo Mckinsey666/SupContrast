@@ -28,11 +28,11 @@ class BasicBlock(nn.Module):
             )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)), inplace = True)
+        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
         preact = out
-        out = F.relu(out, inplace = True)
+        out = F.relu(out, inplace=True)
         if self.is_last:
             return out, preact
         else:
@@ -60,12 +60,12 @@ class Bottleneck(nn.Module):
             )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)), inplace = True)
-        out = F.relu(self.bn2(self.conv2(out)), inplace = True)
+        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
+        out = F.relu(self.bn2(self.conv2(out)), inplace=True)
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
         preact = out
-        out = F.relu(out, inplace = True)
+        out = F.relu(out, inplace=True)
         if self.is_last:
             return out, preact
         else:
@@ -114,7 +114,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x, layer=100):
-        out = F.relu(self.bn1(self.conv1(x)), inplace = True)
+        out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
@@ -182,6 +182,7 @@ class SupConResNet(nn.Module):
 
     def forward(self, x):
         feat = self.encoder(x)
+        self.hidden_feat = feat
         feat = F.normalize(self.head(feat), dim=1)
         return feat
 
@@ -208,53 +209,7 @@ class LinearClassifier(nn.Module):
     def forward(self, features):
         return self.fc(features)
 
-class AugConResNet(nn.Module):
-    """backbone + projection head"""
-    def __init__(self, name='resnet50', head='mlp', feat_dim=128):
-        super(AugConResNet, self).__init__()
-        model_fun, dim_in = model_dict[name]
-        self.encoder = model_fun()
-        if head == 'linear':
-            self.head = nn.Linear(dim_in, feat_dim)
-        elif head == 'mlp':
-            self.head = nn.Sequential(
-                nn.Linear(dim_in, dim_in),
-                nn.ReLU(inplace=True),
-                nn.Linear(dim_in, feat_dim)
-            )
-        else:
-            raise NotImplementedError(
-                'head not supported: {}'.format(head))
 
-    def forward(self, x):
-        feat = self.encoder(x)
-        proj = F.normalize(self.head(feat), dim=1)
-        return feat, proj
-
-class AugmentSelector(nn.Module):
-    """Augmentation selector"""
-    def __init__(self, name='resnet18', num_classes=5):
-        super(AugmentSelector, self).__init__()
-        _, feat_dim = model_dict[name]
-        self.mlp = nn.Sequential(
-            nn.Linear(feat_dim, feat_dim),
-            nn.ReLU(),
-            nn.BatchNorm1d(feat_dim),
-            nn.Linear(feat_dim, num_classes),
-            nn.Sigmoid()
-        )
-    
-    def forward(self, features):
-        probs = self.mlp(features)
-
-        positive_p = probs.unsqueeze(-1)
-        negative_p = (1 - probs).unsqueeze(-1)
-        category_p = torch.cat([positive_p, negative_p], -1) # bernoulli = 2 category sampling
-        category_p = torch.log(category_p + 1e-20)
-
-        bernoulli_sample = F.gumbel_softmax(category_p, hard = True)[:, :, 0]
-        
-        return bernoulli_sample
 
 if __name__ == '__main__':
     G = AugmentSelector()

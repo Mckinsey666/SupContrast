@@ -19,6 +19,7 @@ from networks.resnet_big import SupConResNet
 from losses import SupConLoss
 
 from data import TruncatedCIFAR10
+from autoaug.data import get_data_transform
 
 try:
     import apex
@@ -41,7 +42,7 @@ def parse_option():
                         help='num of workers to use')
     parser.add_argument('--epochs', type=int, default=1000,
                         help='number of training epochs')
-    parser.add_argument('--accum_grad', type = int, default = 8, help = 'Accumulate grad')
+    #parser.add_argument('--accum_grad', type = int, default = 8, help = 'Accumulate grad')
 
     # optimization
     parser.add_argument('--learning_rate', type=float, default=0.05,
@@ -60,6 +61,7 @@ def parse_option():
     parser.add_argument('--dataset', type=str, default='cifar10',
                         choices=['cifar10', 'cifar100'], help='dataset')
     parser.add_argument('--fraction', type=float, default=1, help="truncate dataset")
+    parser.add_argument('--prob', type=float)
 
     # method
     parser.add_argument('--method', type=str, default='SupCon',
@@ -78,6 +80,8 @@ def parse_option():
                         help='warm-up for large batch training')
     parser.add_argument('--trial', type=str, default='0',
                         help='id for recording multiple runs')
+    parser.add_argument('--use_learned_aug', action="store_true")
+    parser.add_argument('--policy', type=str)
 
     opt = parser.parse_args()
 
@@ -97,6 +101,8 @@ def parse_option():
 
     if opt.cosine:
         opt.model_name = '{}_cosine'.format(opt.model_name)
+    if opt.use_learned_aug:
+        opt.model_name = '{}_augpolicy_{}'.format(opt.model_name, opt.policy)
 
     # warm-up for large-batch training,
     if opt.batch_size > 256:
@@ -135,24 +141,28 @@ def set_loader(opt):
         raise ValueError('dataset not supported: {}'.format(opt.dataset))
     normalize = transforms.Normalize(mean=mean, std=std)
 
-    train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(size=32, scale=(0.2, 1.)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomApply([
-            transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
-        ], p=1),
-        #transforms.RandomGrayscale(p=0.2),
-        transforms.ToTensor(),
-        normalize,
-    ])
+    if opt.use_learned_aug:
+        train_transform = get_data_transform(opt.dataset, opt.policy)
+
+    else:
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(size=32, scale=(0.2, 1.)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.ToTensor(),
+            normalize,
+        ])
 
     if opt.dataset == 'cifar10':
-        train_dataset = TruncatedCIFAR10(root=opt.data_folder+'cifar10.npy', 
-                                         transform=TwoCropTransform(train_transform), 
-                                         fraction=opt.fraction)
-        #train_dataset = datasets.CIFAR10(root=opt.data_folder,
-                                         #transform=TwoCropTransform(train_transform),
-                                         #download=True)
+        #train_dataset = TruncatedCIFAR10(root=opt.data_folder+'cifar10.npy', 
+                                         #transform=TwoCropTransform(train_transform), 
+                                         #fraction=opt.fraction)
+        train_dataset = datasets.CIFAR10(root=opt.data_folder,
+                                         transform=TwoCropTransform(train_transform),
+                                         download=True)
         
     elif opt.dataset == 'cifar100':
         train_dataset = datasets.CIFAR100(root=opt.data_folder,
@@ -230,11 +240,6 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
         loss.backward()
         optimizer.step()
 
-        #if (idx + 1) % opt.accum_grad == 0:
-        #    optimizer.step()
-        #    optimizer.zero_grad()
-        
-        # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 

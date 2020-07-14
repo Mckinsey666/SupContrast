@@ -14,6 +14,8 @@ import cv2
 from PIL import Image
 import numpy as np
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 """
     For each augmentation, there will be two differential variables:
     1. Probability (p). 
@@ -30,7 +32,7 @@ import numpy as np
 """
 
 def augment_batch(aug_vec, augmentations, batch, normalize = None):
-    h = Variable(torch.tensor(1.0), requires_grad = True)
+    h = Variable(torch.tensor(1.0, device = device), requires_grad = True)
     transforms_list = []
     for i in range(len(aug_vec)):
         if aug_vec[i] == 1:
@@ -46,11 +48,11 @@ def augment_batch(aug_vec, augmentations, batch, normalize = None):
 
     transformed_batch = []
     for x in batch:
-        x = TF.to_pil_image(x)
+        x = TF.to_pil_image(x.cpu())
         x = transform(x).unsqueeze(0)
         transformed_batch.append(x)
-
-    return h * torch.cat(transformed_batch, dim = 0)
+    transformed_batch = torch.cat(transformed_batch, dim = 0).to(device)
+    return h * transformed_batch
         
 def relaxed_bernoulli(p, temperature = 1, eps = 1e-20):
     """
@@ -59,11 +61,27 @@ def relaxed_bernoulli(p, temperature = 1, eps = 1e-20):
     Returns:
         c: [N] with 0, 1 values indicating bernoulli sample (hard)
     """
-    u = torch.empty(p.shape).uniform_(0, 1)
+    p = torch.clamp(p, 0, 1)
+    #p = torch.sigmoid(p) # raw to (0, 1) prob
+    u = torch.empty(p.shape).uniform_(0, 1).to(device)
     q = torch.log(p/(1 - p + eps) + eps) + torch.log(u / (1 - u + eps) + eps)
     y_soft = torch.sigmoid(q / temperature)
-    y_hard = torch.where(y_soft > 0.5, torch.ones(y_soft.shape), torch.zeros(y_soft.shape))
+    y_hard = torch.where(y_soft > 0.5, torch.ones(y_soft.shape).to(device), torch.zeros(y_soft.shape).to(device))
     return y_hard - y_soft.detach() + y_soft # forward pass hard label, backward soft grad
+
+class GaussianBlurFix:
+    def __init__(self, kernel_size, sigma):
+        # kernel size is set to be 10% of the image height/width
+        self.kernel_size = int(kernel_size)
+        if self.kernel_size % 2 == 0:
+            self.kernel_size += 1
+
+        self.sigma = sigma
+    
+    def __call__(self, x):
+        x = np.array(x)
+        blurred = cv2.GaussianBlur(x, (self.kernel_size, self.kernel_size), self.sigma)
+        return Image.fromarray(blurred)
 
 class GaussianBlur:
     """ Gaussian Blur defined in the SimCLR paper. """
@@ -84,8 +102,11 @@ class GaussianBlur:
         return Image.fromarray(blurred)
 
 class CIFAR10_Transform:
-    def __init__(self):
-        self.aug_num = 5
+    def __init__(self, blur = False):
+
+        self.aug_num = 4
+        if blur:
+            self.aug_num += 1
 
         self.mean = (0.4914, 0.4822, 0.4465)
         self.std = (0.2023, 0.1994, 0.2010)
@@ -96,13 +117,12 @@ class CIFAR10_Transform:
             1: transforms.RandomHorizontalFlip(),
             2: transforms.ColorJitter(0.4, 0.4, 0.4, 0.1),
             3: transforms.Grayscale(num_output_channels = 3), # always 3 channels
-            4: GaussianBlur(kernel_size = 3)
         }
+        if blur:
+            self.augmentations[4] = GaussianBlur(kernel_size = 3)
     
-    def __call__(self, batch, p_raw):
-        assert(len(p_raw) == self.aug_num)
-        p = torch.sigmoid(p_raw)
-        aug_vec = relaxed_bernoulli(p, temperature = 0.7)
+    def __call__(self, batch, aug_vec):
+        assert(len(aug_vec) == self.aug_num)
         return augment_batch(aug_vec, self.augmentations, batch, self.normalize)
 
 if __name__ == "__main__":
