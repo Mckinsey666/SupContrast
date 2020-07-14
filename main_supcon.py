@@ -156,7 +156,6 @@ def set_loader(opt):
             normalize,
         ])
 
-
     if opt.dataset == 'cifar10':
         #train_dataset = TruncatedCIFAR10(root=opt.data_folder+'cifar10.npy', 
                                          #transform=TwoCropTransform(train_transform), 

@@ -5,7 +5,7 @@ from __future__ import print_function
 
 from collections import defaultdict
 
-from .augmentations import get_augment, augment_list
+from augmentations import get_augment, augment_list
 
 
 def arsaug_policy():
@@ -317,8 +317,17 @@ def policy_decoder(augment, num_policy, num_op):
         policies.append(ops)
     return policies
 
-policies = {
-    'contrast_cifar10_epoch20_top25': contrast_cifar10_epoch20_top25(),
-    'contrast_cifar10_epoch50_top25': contrast_cifar10_epoch50_top25(),
-    'contrast_cifar10_epoch100_top25': contrast_cifar10_epoch100_top25(),
-}
+def get_policies():
+    genotypes = {}
+    i = 0
+    with open('genotype.txt', 'r') as file:
+        for line in file:
+            if 'genotype_25' in line:
+                _, g = line.strip().split(': ')
+                g = eval(g)
+                genotypes['cifar10_epoch{}_top25'.format(i)] = g
+                i += 1
+    return genotypes
+    
+policies = get_policies()
+print(list(policies.keys())[0])

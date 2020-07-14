@@ -65,7 +65,7 @@ class Bottleneck(nn.Module):
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
         preact = out
-        out = F.relu(out)
+        out = F.relu(out, inplace=True)
         if self.is_last:
             return out, preact
         else:
@@ -173,7 +173,7 @@ class SupConResNet(nn.Module):
         elif head == 'mlp':
             self.head = nn.Sequential(
                 nn.Linear(dim_in, dim_in),
-                nn.ReLU(),
+                nn.ReLU(inplace=True),
                 nn.Linear(dim_in, feat_dim)
             )
         else:
