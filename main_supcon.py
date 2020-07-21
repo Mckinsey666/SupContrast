@@ -156,6 +156,7 @@ def set_loader(opt):
             normalize,
         ])
 
+
     if opt.dataset == 'cifar10':
         #train_dataset = TruncatedCIFAR10(root=opt.data_folder+'cifar10.npy', 
                                          #transform=TwoCropTransform(train_transform), 
@@ -188,9 +189,9 @@ def set_model(opt):
         model = apex.parallel.convert_syncbn_model(model)
 
     if torch.cuda.is_available():
-        torch.cuda.set_device(1)
-        #if torch.cuda.device_count() > 1:
-        #    model.encoder = torch.nn.DataParallel(model.encoder)
+        #torch.cuda.set_device(1)
+        if torch.cuda.device_count() > 1:
+            model.encoder = torch.nn.DataParallel(model.encoder)
         model = model.cuda()
         criterion = criterion.cuda()
         cudnn.benchmark = True

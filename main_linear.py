@@ -255,7 +255,7 @@ def main():
             best_acc = val_acc
 
     print('best accuracy: {:.2f}'.format(best_acc))
-    with open('aug_crop_comp.txt', 'a') as file:
+    with open('exp.txt', 'a') as file:
         file.write(str(opt) + '\n')
         file.write(str(best_acc.item()) + "\n\n")
  
