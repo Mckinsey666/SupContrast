@@ -7,15 +7,23 @@ from .archive import policies#arsaug_policy, autoaug_policy, autoaug_paper_cifar
 
 _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 
-def get_data_transform(dataset, name):
+def get_data_transform(dataset, name, opt):
     if dataset == 'cifar10':
-        transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
-        ])
-        transform_train.transforms.insert(0, Augmentation(policies[name]))
+        if opt.use_resized_crop:
+            transform_train = transforms.Compose([
+                transforms.RandomResizedCrop(32, scale=(0.2, 1.0)), # pre transform
+                transforms.RandomHorizontalFlip(), # pre transform
+                transforms.ToTensor(), # after transform
+                transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD), # after transform
+            ])
+        else:
+            transform_train = transforms.Compose([
+                transforms.RandomCrop(32, padding=4), # pre transform
+                transforms.RandomHorizontalFlip(), # pre transform
+                transforms.ToTensor(), # after transform
+                transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD), # after transform
+            ])
+        transform_train.transforms.insert(2, Augmentation(policies[name]))
     return transform_train
 
 

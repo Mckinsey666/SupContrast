@@ -82,6 +82,7 @@ def parse_option():
                         help='id for recording multiple runs')
     parser.add_argument('--use_learned_aug', action="store_true")
     parser.add_argument('--policy', type=str)
+    parser.add_argument('--use_resized_crop', action="store_true")
 
     opt = parser.parse_args()
 
@@ -103,6 +104,8 @@ def parse_option():
         opt.model_name = '{}_cosine'.format(opt.model_name)
     if opt.use_learned_aug:
         opt.model_name = '{}_augpolicy_{}'.format(opt.model_name, opt.policy)
+    if opt.use_resized_crop:
+        opt.model_name = '{}_resized_crop'.format(opt.model_name)
 
     # warm-up for large-batch training,
     if opt.batch_size > 256:
@@ -142,7 +145,7 @@ def set_loader(opt):
     normalize = transforms.Normalize(mean=mean, std=std)
 
     if opt.use_learned_aug:
-        train_transform = get_data_transform(opt.dataset, opt.policy)
+        train_transform = get_data_transform(opt.dataset, opt.policy, opt)
 
     else:
         train_transform = transforms.Compose([
