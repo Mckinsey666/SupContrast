@@ -10,6 +10,7 @@ _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 def get_data_transform(dataset, name, opt):
     if dataset == 'cifar10':
         if opt.use_resized_crop:
+            print("Use resize crop")
             transform_train = transforms.Compose([
                 transforms.RandomResizedCrop(32, scale=(0.2, 1.0)), # pre transform
                 transforms.RandomHorizontalFlip(), # pre transform

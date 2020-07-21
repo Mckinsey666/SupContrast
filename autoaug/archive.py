@@ -323,12 +323,12 @@ def policy_decoder(augment, num_policy, num_op):
 def get_policies():
     genotypes = {}
     i = 0
-    with open('./autoaug/contrastive_no_pretext_reduce_cifar10_policy.txt', 'r') as file:
+    with open('./autoaug/contrastive_rotate_resizecrop_reduce_cifar10_policy.txt', 'r') as file:
         for line in file:
             if 'genotype_25' in line:
                 _, g = line.strip().split(': ')
                 g = eval(g)
-                genotypes['contrastive_no_pretext_reduce_cifar10_epoch{}_top25'.format(i)] = g
+                genotypes['contrastive_rotate_resizecrop_reduce_cifar10_epoch{}_top25'.format(i)] = g
                 i += 1
     genotypes['dada_cifar10'] = dada_cifar10()
     genotypes['fa_cifar10'] = fa_reduced_cifar10()
