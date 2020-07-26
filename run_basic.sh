@@ -4,5 +4,5 @@ python3 main_supcon.py --batch_size 1024 \
     --cosine \
     --method SimCLR \
     --model resnet18 \
-    --epochs 500 \
-    --trial baseline_500
+    --epochs 1000 \
+    --trial baseline_1000
