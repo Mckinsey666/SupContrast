@@ -3,6 +3,7 @@ tmp*.py
 datasets/
 save/
 tmp/
+autoaug/*.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
