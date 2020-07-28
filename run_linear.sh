@@ -1,9 +1,9 @@
-for e in 20 50 100 150 199
+for e in 50 100 200 300 400
 do
   echo "Running epoch $e"
     python3 main_linear.py --batch_size 512 \
   --learning_rate 1 \
   --model resnet18 \
   --epochs 100 \
-  --ckpt save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_0_cosine_augpolicy_contrast_rotate_cifar10_v2_epoch$e\_all_resized_crop_warm/ckpt_epoch_200.pth
+  --ckpt save/SupCon/cifar10_models/SimCLR_cifar10_resnet18_lr_0.5_decay_0.0001_bsz_1024_temp_0.5_trial_0_cosine_augpolicy_contrast_rotate_cifar10_v1_epoch$e\_all_resized_crop_warm/ckpt_epoch_200.pth
 done
