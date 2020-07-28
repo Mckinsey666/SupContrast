@@ -28,6 +28,8 @@ except ImportError:
     pass
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print('using', device)
+torch.autograd.set_detect_anomaly(True)
 
 def parse_option():
     parser = argparse.ArgumentParser('argument for training')
@@ -192,7 +194,7 @@ def set_model(opt):
         model = apex.parallel.convert_syncbn_model(model)
 
     if torch.cuda.is_available():
-        #torch.cuda.set_device(1)
+        #torch.cuda.set_device(0)
         if torch.cuda.device_count() > 1:
             model.encoder = torch.nn.DataParallel(model.encoder)
         model = model.cuda()
@@ -257,6 +259,10 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
                    epoch, idx + 1, len(train_loader), batch_time=batch_time,
                    data_time=data_time, loss=losses))
             sys.stdout.flush()
+            
+        del images
+        del features
+        torch.cuda.empty_cache()
 
     return losses.avg
 

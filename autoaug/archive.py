@@ -322,17 +322,25 @@ def policy_decoder(augment, num_policy, num_op):
 
 def get_policies():
     genotypes = {}
+    probs = {}
     i = 0
+    j = 0
     with open('./autoaug/cifar10_byol.txt', 'r') as file:
         for line in file:
             if 'genotype_105' in line:
                 _, g = line.strip().split(': ')
                 g = eval(g)
-                genotypes['cifar10_byol_all'.format(i)] = g
+                genotypes['cifar10_byol_epoch{}_all'.format(i)] = g
                 i += 1
+            if 'probs' in line:
+                p = line.strip().split('probs')[-1]
+                p = eval(p)
+                probs['cifar10_byol_epoch{}_all'.format(j)] = p
+                j += 1
+
     genotypes['dada_cifar10'] = dada_cifar10()
     genotypes['fa_cifar10'] = fa_reduced_cifar10()
-    return genotypes
+    return genotypes, probs
     
-policies = get_policies()
+#policies, probs = get_policies()
 #print(list(policies.keys())[0])
