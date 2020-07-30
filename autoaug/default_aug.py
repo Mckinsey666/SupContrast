@@ -93,6 +93,7 @@ def Gray(img, m):
 
 def GaussianBlur(img, m):
     assert 0.1 <= m <= 1.9 # sigma size
+    img = np.asarray(img)
     kernel_size = int(0.1 * img.shape[0])
     kernel_size |= 1 # make odd size
     blurred = cv2.GaussianBlur(img, (kernel_size, kernel_size), m)
@@ -101,45 +102,33 @@ def GaussianBlur(img, m):
 # Modules
 
 class BrightnessModule(object):
-    def __init__(self, m, p):
+    def __init__(self, m):
         self.m = m
-        self.p = p
     def __call__(self, img):
-        p = random.random()
-        return PIL.ImageEnhance.Brightness(img).enhance(self.m) if p < self.p else img
+        return TF.adjust_brightness(img, self.m)
 
 class ContrastModule(object):
-    def __init__(self, m, p):
+    def __init__(self, m):
         self.m = m
-        self.p = p
     def __call__(self, img):
-        p = random.random()
-        return PIL.ImageEnhance.Contrast(img).enhance(self.m) if p < self.p else img
+        return TF.adjust_contrast(img, self.m)
 
 class SaturationModule(object):
-    def __init__(self, m, p):
+    def __init__(self, m):
         self.m = m
-        self.p = p
     def __call__(self, img):
-        p = random.random()
-        return PIL.ImageEnhance.Color(img).enhance(self.m) if p < self.p else img
+        return TF.adjust_saturation(img, self.m)
 
 class HueModule(object):
-    def __init__(self, m, p):
+    def __init__(self, m):
         self.m = m
-        self.p = p
     def __call__(self, img):
-        p = random.random()
-        return TF.adjust_hue(img, self.m) if p < self.p else img
+        return TF.adjust_hue(img, self.m)
 
 class GaussianBlurModule(object):
-    def __init__(self, m, p):
+    def __init__(self, m):
         self.m = m
-        self.p = p
     def __call__(self, img):
-        p = random.random()
-        if p > self.p:
-            return img
         img = np.asarray(img)
         kernel_size = int(0.1 * img.shape[0])
         kernel_size |= 1 # make odd size
@@ -147,8 +136,6 @@ class GaussianBlurModule(object):
         return blurred
 
     
-
-
 def augment_list():  # SimCLR operations
     eps = 1e-6
     l = [
@@ -188,14 +175,27 @@ def get_augment(name):
 def get_module(policy):
     name, pr, level = policy
     if name == 'Gray':
-        return transforms.RandomApply([transforms.Grayscale(3)], pr)
+        return transforms.Grayscale(3)
     else:
         _, low, high = get_augment(name)
         m = low + (high - low) * level
-        return module_dict[name](m, pr)
+        return module_dict[name](m)
 
 def get_composed(policies):
     return transforms.Compose([get_module(pol) for pol in policies])
+
+def get_power_policy(policy):
+    """ power set of policy """
+    power_policy = {}
+    tot = 2**len(policy)
+    for i in range(tot):
+        idx = bin(i)[2:].zfill(len(policy))
+        t_list = [get_module(p) for i, p in enumerate(policy) if idx[i] == '1']
+        power_policy[i] = transforms.Compose(t_list)
+    return power_policy
+        
+    
+    
 
 
 def apply_augment(img, name, level):

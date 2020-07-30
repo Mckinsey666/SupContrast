@@ -1,4 +1,4 @@
-for e in 200 300 400
+for e in 200
 do
 python3 main_supcon.py --batch_size 1024 \
   --learning_rate 0.5 \
