@@ -26,6 +26,7 @@ def get_data_transform(dataset, name, opt):
                 transforms.RandomCrop(32, padding=4), # pre transform
                 transforms.RandomHorizontalFlip(), # pre transform
                 transforms.ToTensor(), # after transform
+                
                 transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD), # after transform
             ])
         transform_train.transforms.insert(2, Augmentation(policies[name], probs[name] if name in probs else None))
@@ -35,7 +36,7 @@ i = 0
 
 class Augmentation(object):
     def __init__(self, policies, probs):
-        self.policies = [get_composed(pol) for pol in policies]
+        self.policies = policies#[get_composed(pol) for pol in policies]
         print(self.policies)
         self.probs = probs
         if self.probs is None:
@@ -47,7 +48,14 @@ class Augmentation(object):
         
     def __call__(self, img):
         #policy_id = np.random.choice(len(self.policies), p=self.probs) # weighted policies
-        for _ in range(1):
-            policy_id = random.choices(self.pid, self.probs, k=1)[0]
-            policy = self.policies[policy_id]
-            return policy(img)
+        policy_id = random.choices(self.policies, self.probs, k=1)[0]
+        policy = self.policies[policy_id]
+        probs = [p for name, pr, level in policy]
+        p = np.random.random(len(policy))
+        do_aug = p < probs
+        
+        do_aug = list(zip(do_aug, policy))
+        for v, (name, _, level) in do_aug:
+            if v:
+                img = apply_augment(img, name, level)
+        return img

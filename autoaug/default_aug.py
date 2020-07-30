@@ -13,7 +13,6 @@ from torchvision.transforms.transforms import Compose
 from torchvision import transforms
 import torchvision.transforms.functional as TF
 import cv2
-from random import uniform
 
 
 
@@ -94,7 +93,6 @@ def Gray(img, m):
 
 def GaussianBlur(img, m):
     assert 0.1 <= m <= 1.9 # sigma size
-    img = np.asarray(img)
     kernel_size = int(0.1 * img.shape[0])
     kernel_size |= 1 # make odd size
     blurred = cv2.GaussianBlur(img, (kernel_size, kernel_size), m)
@@ -107,31 +105,31 @@ class BrightnessModule(object):
         self.m = m
         self.p = p
     def __call__(self, img):
-        p = uniform(0, 1)
-        return TF.adjust_brightness(img, self.m) if p < self.p else img
+        p = random.random()
+        return PIL.ImageEnhance.Brightness(img).enhance(self.m) if p < self.p else img
 
 class ContrastModule(object):
     def __init__(self, m, p):
         self.m = m
         self.p = p
     def __call__(self, img):
-        p = uniform(0, 1)
-        return TF.adjust_contrast(img, self.m) if p < self.p else img
+        p = random.random()
+        return PIL.ImageEnhance.Contrast(img).enhance(self.m) if p < self.p else img
 
 class SaturationModule(object):
     def __init__(self, m, p):
         self.m = m
         self.p = p
     def __call__(self, img):
-        p = uniform(0, 1)
-        return TF.adjust_saturation(img, self.m) if p < self.p else img
+        p = random.random()
+        return PIL.ImageEnhance.Color(img).enhance(self.m) if p < self.p else img
 
 class HueModule(object):
     def __init__(self, m, p):
         self.m = m
         self.p = p
     def __call__(self, img):
-        p = uniform(0, 1)
+        p = random.random()
         return TF.adjust_hue(img, self.m) if p < self.p else img
 
 class GaussianBlurModule(object):
@@ -139,7 +137,7 @@ class GaussianBlurModule(object):
         self.m = m
         self.p = p
     def __call__(self, img):
-        p = uniform(0, 1)
+        p = random.random()
         if p > self.p:
             return img
         img = np.asarray(img)
