@@ -93,6 +93,7 @@ def Gray(img, m):
 
 def GaussianBlur(img, m):
     assert 0.1 <= m <= 1.9 # sigma size
+    img = np.array(img)
     kernel_size = int(0.1 * img.shape[0])
     kernel_size |= 1 # make odd size
     blurred = cv2.GaussianBlur(img, (kernel_size, kernel_size), m)

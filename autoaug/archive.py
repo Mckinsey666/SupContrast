@@ -325,17 +325,17 @@ def get_policies():
     probs = {}
     i = 0
     j = 0
-    with open('./autoaug/default_set_cifar10.txt', 'r') as file:
+    with open('./autoaug/default_level2_cifar10.txt', 'r') as file:
         for line in file:
             if 'genotype' in line:
                 _, g = line.strip().split(': ')
                 g = eval(g)
-                genotypes['cifar10_default_set_epoch{}'.format(i)] = g
+                genotypes['cifar10_default_level2_epoch{}'.format(i)] = g
                 i += 1
             if 'probs' in line:
                 p = line.strip().split('probs')[-1]
                 p = eval(p)
-                probs['cifar10_default_set_epoch{}'.format(j)] = p
+                probs['cifar10_default_level2_epoch{}'.format(j)] = p
                 j += 1
     return genotypes, probs
     
