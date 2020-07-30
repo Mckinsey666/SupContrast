@@ -325,21 +325,18 @@ def get_policies():
     probs = {}
     i = 0
     j = 0
-    with open('./autoaug/cifar10_byol.txt', 'r') as file:
+    with open('./autoaug/default_set_cifar10.txt', 'r') as file:
         for line in file:
-            if 'genotype_105' in line:
+            if 'genotype' in line:
                 _, g = line.strip().split(': ')
                 g = eval(g)
-                genotypes['cifar10_byol_epoch{}_all'.format(i)] = g
+                genotypes['cifar10_default_set_epoch{}'.format(i)] = g
                 i += 1
             if 'probs' in line:
                 p = line.strip().split('probs')[-1]
                 p = eval(p)
-                probs['cifar10_byol_epoch{}_all'.format(j)] = p
+                probs['cifar10_default_set_epoch{}'.format(j)] = p
                 j += 1
-
-    genotypes['dada_cifar10'] = dada_cifar10()
-    genotypes['fa_cifar10'] = fa_reduced_cifar10()
     return genotypes, probs
     
 #policies, probs = get_policies()

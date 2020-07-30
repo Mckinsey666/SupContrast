@@ -1,5 +1,4 @@
-
-for e in 200
+for e in 200 300 400
 do
 python3 main_supcon.py --batch_size 1024 \
   --learning_rate 0.5 \
@@ -9,6 +8,6 @@ python3 main_supcon.py --batch_size 1024 \
   --model resnet18 \
   --epochs 200 \
   --use_learned_aug \
-  --policy cifar10_byol_epoch$e\_all \
+  --policy cifar10_default_set_epoch$e \
   --use_resized_crop
 done
