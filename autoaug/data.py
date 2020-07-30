@@ -49,7 +49,7 @@ class Augmentation(object):
     def __call__(self, img):
         #policy_id = np.random.choice(len(self.policies), p=self.probs) # weighted policies
         policy_id = random.choices(self.pid, self.probs, k=1)[0]
-        policy = self.policies[policy_id][:2]
+        policy = self.policies[policy_id]
         probs = [pr for name, pr, level in policy]
         p = np.random.random(len(policy))
         do_aug = p < probs
