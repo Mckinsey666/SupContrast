@@ -3,7 +3,7 @@ import torchvision
 import numpy as np
 from PIL import Image
 from torchvision.transforms import transforms
-#import augmentations
+#from .augmentations import *
 from .default_aug import *
 from .archive import get_policies#arsaug_policy, autoaug_policy, autoaug_paper_cifar10, fa_reduced_cifar10, fa_reduced_svhn, fa_resnet50_rimagenet
 import random
@@ -50,12 +50,8 @@ class Augmentation(object):
         #policy_id = np.random.choice(len(self.policies), p=self.probs) # weighted policies
         policy_id = random.choices(self.pid, self.probs, k=1)[0]
         policy = self.policies[policy_id]
-        probs = [pr for name, pr, level in policy]
-        p = np.random.random(len(policy))
-        do_aug = p < probs
         
-        do_aug = list(zip(do_aug, policy))
-        for v, (name, _, level) in do_aug:
-            if v:
+        for name, pr, level in policy:
+            if random.random() > pr:
                 img = apply_augment(img, name, level)
         return img

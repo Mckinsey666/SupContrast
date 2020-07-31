@@ -7,6 +7,10 @@ import numpy as np
 import torch
 from torchvision.transforms.transforms import Compose
 
+from torchvision import transforms
+import torchvision.transforms.functional as TF
+import cv2
+
 random_mirror = True
 
 
@@ -113,6 +117,27 @@ def Sharpness(img, v):  # [0.1,1.9]
     assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Sharpness(img).enhance(v)
 
+# added
+def Saturation(img, v):  # [0.1,1.9]
+    assert 0.1 <= v <= 1.9
+    return PIL.ImageEnhance.Color(img).enhance(v)
+
+def Hue(img, m):
+    assert -0.5<=m<=0.5
+    return TF.adjust_hue(img, m)
+
+def Gray(img, m):
+    return TF.to_grayscale(img, 3)
+
+def GaussianBlur(img, m):
+    assert 0.1 <= m <= 1.9 # sigma size
+    return img
+    img = np.asarray(img)
+    kernel_size = int(0.1 * img.shape[0])
+    kernel_size |= 1 # make odd size
+    blurred = cv2.GaussianBlur(img, (kernel_size, kernel_size), m)
+    return blurred
+
 
 def Cutout(img, v):  # [0, 60] => percentage: [0, 0.2]
     assert 0.0 <= v <= 0.2
@@ -169,7 +194,11 @@ def augment_list(for_autoaug=True):  # 16 oeprations and their ranges
         (Color, 0.1, 1.9),  # 11
         (Brightness, 0.1, 1.9),  # 12
         (Sharpness, 0.1, 1.9),  # 13
-        (Cutout, 0, 0.2),  # 14
+        (Cutout, 0, 0.2),  # 14,
+        (GaussianBlur, 0.1,1.9),
+        (Gray, 0,1),
+        (Hue, -0.5,0.5),
+        (Saturation, 0.1,1.9)
         # (SamplePairing(imgs), 0, 0.4),  # 15
     ]
     if for_autoaug:

@@ -3,7 +3,7 @@
 # https://github.com/rpmcruz/autoaugment/blob/master/transformations.py
 import random
 
-import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
+import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw, PIL.ImageFilter
 import numpy as np
 import torch
 import torch.nn as nn
@@ -31,22 +31,28 @@ def RandomResizedCrop_p(img, m):
     return t(img)
 
 def Brightness_p(img, m):
-    assert 0 <= m <= 1
-    s = np.random.uniform(1-m, 1+m) # 0 ~ 2
+    assert 0.1 <= m <= 1.9
+    low = max(0, 1-m)
+    high = 1+m
+    s = np.random.uniform(low, high)
     return TF.adjust_brightness(img, s)
 
 def Contrast_p(img, m):
-    assert 0 <= m <= 1
-    s = np.random.uniform(1-m, 1+m) # 0 ~ 2
+    assert 0.1 <= m <= 1.9
+    low = max(0, 1-m)
+    high = 1+m
+    s = np.random.uniform(low, high)
     return TF.adjust_contrast(img, s) 
     
 def Saturation_p(img, m):
-    assert 0 <= m <= 1
-    s = np.random.uniform(1-m, 1+m) # 0 ~ 2
+    assert 0.1 <= m <= 1.9
+    low = max(0, 1-m)
+    high = 1+m
+    s = np.random.uniform(low, high)
     return TF.adjust_saturation(img, s) 
 
 def Hue_p(img, m):
-    assert 0 <= m <= 0.5
+    assert 0.1 <= m <= 0.5
     s = np.random.uniform(-m, m) # -0.5 ~ 0.5
     return TF.adjust_hue(img, s)
 
@@ -55,13 +61,10 @@ def Gray_p(img, m):
     return TF.to_grayscale(img, 3) # num output channels = 3 for RGB
 
 def GaussianBlur_p(img, m):
-    assert 0 <= m <= 2 # sigma size
-    img = np.asarray(img)
-    kernel_size = int(0.1 * img.shape[0])
-    kernel_size |= 1 # make odd size
-    s = np.random.uniform(2-m-1e-6, 2) # m ~ 2
-    blurred = cv2.GaussianBlur(img, (kernel_size, kernel_size), s)
-    return blurred
+    assert 0.1 <= m <= 1.9 # range magnitude
+    s = np.random.uniform(2-m, 2) # sigma
+    r = int(np.ceil(2 * s)) | 1 # radius
+    return img.filter(PIL.ImageFilter.GaussianBlur(r))
 
 # Deterministic version
 def ResizedCrop(img, m):
@@ -99,25 +102,46 @@ def GaussianBlur(img, m):
     blurred = cv2.GaussianBlur(img, (kernel_size, kernel_size), m)
     return blurred
     
+
+def augment_list():  # SimCLR operations
+    eps = 1e-6
+    l = [
+        (RandomResizedCrop_p, 0.1, 1.9),
+        (Brightness_p, 0.1, 1.9),
+        (Contrast_p, 0.1, 1.9),
+        (Saturation_p, 0.1, 1.9),
+        (Hue_p, 0.1, 0.5),
+        (Gray_p, 0, 1), # but magnitude doesn't matter, just dummy
+        (GaussianBlur_p, 0.1, 1.9), # blur radius
+        (ResizedCrop, 0.1, 0.9),
+        (Brightness, 0.1, 1.9),
+        (Contrast, 0.1,1.9),
+        (Saturation, 0.1,1.9),
+        (Hue, -0.5, 0.5),
+        (Gray, 0.1, 1.9),
+        (GaussianBlur, 0.1, 1.9)
+    ]
+    return l
+    
 # Modules
 
 class BrightnessModule(object):
     def __init__(self, m):
         self.m = m
     def __call__(self, img):
-        return TF.adjust_brightness(img, self.m)
+        return PIL.ImageEnhance.Brightness(img).enhance(self.m)
 
 class ContrastModule(object):
     def __init__(self, m):
         self.m = m
     def __call__(self, img):
-        return TF.adjust_contrast(img, self.m)
+        return PIL.ImageEnhance.Contrast(img).enhance(self.m)
 
 class SaturationModule(object):
     def __init__(self, m):
         self.m = m
     def __call__(self, img):
-        return TF.adjust_saturation(img, self.m)
+        return PIL.ImageEnhance.Color(img).enhance(self.m)
 
 class HueModule(object):
     def __init__(self, m):
@@ -137,15 +161,14 @@ class GaussianBlurModule(object):
 
     
 def augment_list():  # SimCLR operations
-    eps = 1e-6
     l = [
-        (RandomResizedCrop_p, eps, 1),
-        (Brightness_p, eps, 1),
-        (Contrast_p, eps, 1),
-        (Saturation_p, eps, 1),
-        (Hue_p, 0, 0.5),
+        (RandomResizedCrop_p, 0.1, 1.9),
+        (Brightness_p, 0.1, 1.9),
+        (Contrast_p, 0.1, 1.9),
+        (Saturation_p, 0.1, 1.9),
+        (Hue_p, 0.1, 0.5),
         (Gray_p, 0, 1), # but magnitude doesn't matter, just dummy
-        (GaussianBlur_p, eps, 2),
+        (GaussianBlur_p, 0.1, 1.9), # blur radius
         (ResizedCrop, 0.1, 0.9),
         (Brightness, 0.1, 1.9),
         (Contrast, 0.1,1.9),
