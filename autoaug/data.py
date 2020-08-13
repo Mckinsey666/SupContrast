@@ -4,7 +4,8 @@ import numpy as np
 from PIL import Image
 from torchvision.transforms import transforms
 #from .augmentations import *
-from .default_aug import *
+#from .default_aug import *
+from .simclr_aug import *
 from .archive import get_policies#arsaug_policy, autoaug_policy, autoaug_paper_cifar10, fa_reduced_cifar10, fa_reduced_svhn, fa_resnet50_rimagenet
 import random
 
@@ -22,14 +23,15 @@ def get_data_transform(dataset, name, opt):
                 transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD), # after transform
             ])
         else:
+            print("Random crop")
             transform_train = transforms.Compose([
-                transforms.RandomCrop(32, padding=4), # pre transform
+                #transforms.RandomCrop(32, padding=4), # pre transform
                 transforms.RandomHorizontalFlip(), # pre transform
                 transforms.ToTensor(), # after transform
                 
                 transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD), # after transform
             ])
-        transform_train.transforms.insert(2, Augmentation(policies[name], probs[name] if name in probs else None))
+        transform_train.transforms.insert(1, Augmentation(policies[name], probs[name] if name in probs else None))
     return transform_train
 
 i = 0
@@ -42,6 +44,7 @@ class Augmentation(object):
         if self.probs is None:
             self.probs = np.ones(len(self.policies)) / len(self.policies)
         else:
+            print("Using probs")
             self.probs = np.array(self.probs) / np.sum(self.probs)
         self.pid = np.arange(len(self.policies))
         self.i=0

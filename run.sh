@@ -1,4 +1,4 @@
-for e in 200 400
+for e in 999
 do
 python3 main_supcon.py --batch_size 1024 \
   --learning_rate 0.5 \
@@ -8,6 +8,6 @@ python3 main_supcon.py --batch_size 1024 \
   --model resnet18 \
   --epochs 200 \
   --use_learned_aug \
-  --policy cifar10_default_prob_epoch$e \
-  --use_resized_crop
+  --policy default_jigsaw_epoch$e \
+  --trial raw
 done
