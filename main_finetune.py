@@ -150,9 +150,7 @@ def train(train_loader, model, classifier, criterion, optimizer, epoch, opt):
         warmup_learning_rate(opt, epoch, idx, len(train_loader), optimizer)
 
         # compute loss
-        with torch.no_grad():
-            features = model.encoder(images)
-        output = classifier(features.detach())
+        output = model(images)
         loss = criterion(output, labels)
 
         # update metric
@@ -200,7 +198,7 @@ def validate(val_loader, model, classifier, criterion, opt):
             bsz = labels.shape[0]
 
             # forward
-            output = classifier(model.encoder(images))
+            output = model(images)
             loss = criterion(output, labels)
 
             # update metric
@@ -233,6 +231,7 @@ def main():
 
     # build model and criterion
     model, classifier, criterion = set_model(opt)
+    model = nn.Sequential(model.encoder, classifier) # concat
 
     # build optimizer
     optimizer = set_optimizer(opt, classifier)

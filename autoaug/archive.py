@@ -325,17 +325,17 @@ def get_policies():
     probs = {}
     i = 0
     j = 0
-    with open('./autoaug/default_jigsaw.txt', 'r') as file:
+    with open('./autoaug/jigsaw_cifar100.txt', 'r') as file:
         for line in file:
             if 'genotype_25' in line:
                 _, g = line.strip().split(': ')
                 g = eval(g)
-                genotypes['default_jigsaw_epoch{}'.format(i)] = g
+                genotypes['jigsaw_cifar100_epoch{}'.format(i)] = g
                 i += 1
             if 'probs' in line:
                 p = line.strip().split('probs')[-1]
                 p = eval(p)
-                probs['default_jigsaw_epoch{}'.format(j)] = p
+                probs['jigsaw_cifar100_epoch{}'.format(j)] = p
                 j += 1
     return genotypes, probs
     

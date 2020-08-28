@@ -13,7 +13,7 @@ _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 
 def get_data_transform(dataset, name, opt):
     policies, probs = get_policies()
-    if dataset == 'cifar10':
+    if dataset == 'cifar10' or dataset == 'cifar100':
         if opt.use_resized_crop:
             print("Use resize crop")
             transform_train = transforms.Compose([

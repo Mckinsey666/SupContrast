@@ -5,4 +5,5 @@ python3 main_supcon.py --batch_size 1024 \
     --method SimCLR \
     --model resnet18 \
     --epochs 1000 \
+    --dataset cifar100 \
     --trial baseline_1000

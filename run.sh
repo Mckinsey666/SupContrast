@@ -1,4 +1,4 @@
-for e in 999
+for e in 200
 do
 python3 main_supcon.py --batch_size 1024 \
   --learning_rate 0.5 \
@@ -6,8 +6,9 @@ python3 main_supcon.py --batch_size 1024 \
   --cosine \
   --method SimCLR \
   --model resnet18 \
-  --epochs 200 \
+  --epochs 1000 \
   --use_learned_aug \
-  --policy default_jigsaw_epoch$e \
-  --trial raw
+  --dataset cifar100 \
+  --policy jigsaw_cifar100_epoch$e \
+  --trial 825
 done

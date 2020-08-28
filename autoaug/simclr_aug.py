@@ -13,7 +13,7 @@ from torchvision.transforms.transforms import Compose
 
 from torchvision import transforms
 import torchvision.transforms.functional as TF
-#import cv2
+import cv2
 
 
 
@@ -31,67 +31,6 @@ def RandomResizedCrop(img, m):
     t = transforms.RandomResizedCrop((h, w), scale=(1-m, 1))
     return t(img)
 
-def Brightness_p(img, m):
-    assert 0.1 <= m <= 1.9
-    low = max(0, 1-m)
-    high = 1+m
-    s = np.random.uniform(low, high)
-    return TF.adjust_brightness(img, s)
-
-def Contrast_p(img, m):
-    assert 0.1 <= m <= 1.9
-    low = max(0, 1-m)
-    high = 1+m
-    s = np.random.uniform(low, high)
-    return TF.adjust_contrast(img, s) 
-    
-def Saturation_p(img, m):
-    assert 0.1 <= m <= 1.9
-    low = max(0, 1-m)
-    high = 1+m
-    s = np.random.uniform(low, high)
-    return TF.adjust_saturation(img, s) 
-
-def Hue_p(img, m):
-    assert 0.1 <= m <= 0.5
-    s = np.random.uniform(-m, m) # -0.5 ~ 0.5
-    return TF.adjust_hue(img, s)
-
-def Gray_p(img, m):
-    # s doesn't matter
-    return TF.to_grayscale(img, 3) # num output channels = 3 for RGB
-
-def GaussianBlur_p(img, m):
-    assert 0.1 <= m <= 1.9 # range magnitude
-    s = np.random.uniform(2-m, 2) # sigma
-    r = int(np.ceil(2 * s)) | 1 # radius
-    return img.filter(PIL.ImageFilter.GaussianBlur(r))
-
-# Deterministic version
-def ResizedCrop(img, m):
-    assert 0.1 <= m <= 0.9
-    h, w = img.size[0], img.size[1]
-    new_h = int(h * (1-m))
-    new_w = int(w * (1-m))
-    t = transforms.RandomCrop(size=(new_h, new_w))
-    return t(img)
-
-def Brightness(img, m):
-    assert 0.1<=m<=1.9
-    return TF.adjust_brightness(img, m)
-
-def Contrast(img, m):
-    assert 0.1<=m<=1.9
-    return TF.adjust_contrast(img, m)
-
-def Saturation(img, m):
-    assert 0.1<=m<=1.9
-    return TF.adjust_saturation(img, m)
-
-def Hue(img, m):
-    assert -0.5<=m<=0.5
-    return TF.adjust_hue(img, m)
-
 def Gray(img, m):
     return TF.to_grayscale(img, 3)
 
@@ -100,8 +39,6 @@ def GaussianBlur(img, m):
     r = int(np.ceil(2 * m)) | 1 # radius
     # faster
     return img.filter(PIL.ImageFilter.GaussianBlur(r))
-    
-# SimCLR style 
 
 def ColorJitter(img, m):
     assert 0.1 <= m <= 2.4
@@ -109,24 +46,40 @@ def ColorJitter(img, m):
     t = transforms.ColorJitter(*jitter_scale)
     return t(img)
 
+def Invert(img, _):
+    return PIL.ImageOps.invert(img)
+
+
+def Equalize(img, _):
+    return PIL.ImageOps.equalize(img)
+
+def Solarize(img, v):  # [0, 256]
+    assert 0 <= v <= 256
+    v = np.random.uniform(256 - v, 256)
+    v = int(v)
+    return PIL.ImageOps.solarize(img, v)
+
+
+def Posterize(img, v):  # [1, 8]
+    assert 1 <= v <= 8
+    v = np.random.uniform(8 - v, v)
+    v = int(v)
+    return PIL.ImageOps.posterize(img, v)
+
+
+
 def augment_list():  # SimCLR operations
     eps = 1e-6
     l = [
         (RandomResizedCrop, 0.05, 0.95),
-        (Brightness_p, 0.1, 1.9),
-        (Contrast_p, 0.1, 1.9),
-        (Saturation_p, 0.1, 1.9),
-        (Hue_p, 0.1, 0.5),
-        (Gray_p, 0, 1), # but magnitude doesn't matter, just dummy
-        (GaussianBlur_p, 0.1, 1.9), # blur radius
-        (ResizedCrop, 0.1, 0.9),
-        (Brightness, 0.1, 1.9),
-        (Contrast, 0.1,1.9),
-        (Saturation, 0.1,1.9),
-        (Hue, -0.5, 0.5),
         (Gray, 0.1, 1.9),
         (GaussianBlur, 0.1, 1.9),
-        (ColorJitter, 0.1, 2.4)
+        (ColorJitter, 0.1, 2.4),
+        # Added
+        (Invert, 0, 1),
+        (Equalize, 0, 1),
+        (Solarize, 0, 256),
+        (Posterize, 1, 8)
     ]
     return l
 
@@ -143,6 +96,3 @@ def apply_augment(img, name, level):
     augment_fn, low, high = get_augment(name)
     m = low + (high - low) * level # scale to augmentation levels
     return augment_fn(img.copy(), m)
-
-
-
